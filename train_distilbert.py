@@ -26,7 +26,7 @@ def save_config(config, config_path):
     logger.info(f"Configuration saved to {config_path}")
 
 
-CONFIG_FILE = 'model_configs/lstm_tuning_v1.yaml'
+CONFIG_FILE = 'model_configs/distilbert_tuning_v1.yaml'
 FORCE_TUNING = False
 
 # Load configuration
@@ -68,7 +68,7 @@ data_processor = YelpDataProcessor(
 
 # Prepare data
 logger.info( "Preparing data..." )
-train_loader, val_loader, test_loader, df = data_processor.prepare_data_bert()
+train_dataset, train_loader, val_loader, test_loader, df = data_processor.prepare_data_bert()
 
 # Apply best parameters if they exist, otherwise use defaults from config
 effective_model_config = copy.deepcopy( model_config )
@@ -112,34 +112,17 @@ trainer = DistilBERTTrainer(
 
 # Get training data for hyperparameter tuning if needed
 if need_tuning:
-    logger.info("Preparing data for hyperparameter tuning...")
-    # For BERT models, we need to extract data differently because it's not a simple tensor dataset
-    X_train = []
-    y_train = []
-        
-    for batch in train_loader:
-        # Extract input_ids and labels
-        input_ids = batch['input_ids'].numpy()
-        labels = batch['label'].numpy()
-        
-        X_train.extend( input_ids )
-        y_train.extend( labels )
-    
-    X_train = np.array( X_train )
-    y_train = np.array( y_train )
-    
-    logger.info( f"Prepared data for hyperparameter tuning: {X_train.shape}, {y_train.shape}" )
     
     logger.info( f"Performing hyperparameter tuning with {hp_tuning_config.get('n_trials', 20)} trials "
                  f"and {hp_tuning_config.get('cv_folds', 3)}-fold cross-validation..." )
     
     # Perform hyperparameter tuning
-    best_params = trainer.hyperparameter_tuning(
-        X_train = X_train,
-        y_train = y_train,
-        n_trials = hp_tuning_config.get( 'n_trials', 20 ),
-        cross_validation = hp_tuning_config.get( 'cv_folds', 3 )
-    )
+    with torch.amp.autocast( enabled = True, device_type = device.type ):
+        best_params = trainer.hyperparameter_tuning(
+            dataset = train_dataset,
+            n_trials = hp_tuning_config.get( 'n_trials', 20 ),
+            cross_validation = hp_tuning_config.get( 'cv_folds', 3 )
+        )
     
     # Update configuration with best parameters
     config['hyperparameter_tuning']['best_params'] = best_params
@@ -177,22 +160,22 @@ logger.info( f"Training DistilBERT model for {training_config.get('epochs', 4)} 
 scheduler_name = effective_training_config.get( 'scheduler', 'onecycle' )
 if scheduler_name == 'none':
     scheduler_name = None
-    
-history = trainer.train(
-    train_loader = trainer.train_loader,
-    val_loader = trainer.val_loader,
-    epochs = training_config.get('epochs', 4),
-    scheduler_name = scheduler_name,
-    full_train = True
-)
 
-# Evaluate the model
-logger.info( "Evaluating DistilBERT model..." )
-results, test_preds, test_labels = trainer.evaluate(
-    test_loader = trainer.test_loader,
-    class_names = data_processor.label_encoder.classes_
-)
+with torch.amp.autocast( enabled = True, device_type = device.type ):
+    history = trainer.train(
+        train_loader = trainer.train_loader,
+        val_loader = trainer.val_loader,
+        epochs = training_config.get('epochs', 4),
+        scheduler_name = scheduler_name,
+        full_train = True
+    )
 
+    # Evaluate the model
+    logger.info( "Evaluating DistilBERT model..." )
+    results, test_preds, test_labels = trainer.evaluate(
+        test_loader = trainer.test_loader,
+        class_names = data_processor.label_encoder.classes_
+    )
 # Analyze by review length
 trainer.analyze_by_length( df, test_preds, test_labels )
 

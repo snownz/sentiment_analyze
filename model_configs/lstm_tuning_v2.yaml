@@ -1,0 +1,40 @@
+data:
+  batch_size: 128
+  max_length: 128
+  max_vocab_size: 10000
+  path: data/yelp_reviews.json
+  tokenization_method: bpe
+
+hyperparameter_tuning:
+  best_params:
+    attention: true
+    batch_size: 512
+    bidirectional: false
+    dropout: 0.22813874873741963
+    embedding_dim: 128
+    hidden_size: 128
+    learning_rate: 0.0030615621511956223
+    optimizer: adamw
+    weight_decay: 5.018912383631521e-05
+  cv_folds: 5
+  enabled: true
+  n_epochs: 5
+  n_trials: 30
+
+model:
+  bidirectional: true
+  dropout: 0.2
+  embedding_dim: 128
+  hidden_size: 64
+  num_layers: 1
+  use_attention: true
+
+name: lstm_tuning_v1
+
+training:
+  epochs: 100
+  learning_rate: 0.001
+  optimizer: adamw
+  scheduler: onecycle
+  seed: 42
+  weight_decay: 0.01

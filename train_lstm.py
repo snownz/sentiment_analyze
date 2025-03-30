@@ -25,7 +25,7 @@ def save_config(config, config_path):
         yaml.dump( config, f, default_flow_style = False )
     logger.info(f"Configuration saved to {config_path}")
 
-CONFIG_FILE = 'model_configs/lstm_tuning_v1.yaml'
+CONFIG_FILE = 'model_configs/lstm_tuning_v2.yaml'
 FORCE_TUNING = False
 
 # Load configuration
@@ -66,7 +66,7 @@ data_processor = YelpDataProcessor(
 
 # Prepare data
 logger.info( "Preparing data..." )
-train_loader, val_loader, test_loader, df = data_processor.prepare_data_lstm(
+train_dataset, train_loader, val_loader, test_loader, df = data_processor.prepare_data_lstm(
     max_vocab_size = data_config.get( 'max_vocab_size', 10000 )
 )
 
@@ -129,10 +129,6 @@ trainer = LSTMTrainer(
 # Get training data for hyperparameter tuning if needed
 # need_tuning = False
 if need_tuning:
-
-    logger.info( "Preparing data for hyperparameter tuning..." )
-    X_train = np.array( [ data for data, _ in train_loader.dataset ] )
-    y_train = np.array( [ label for _, label in train_loader.dataset ] )
     
     logger.info( f"Performing hyperparameter tuning with {hp_tuning_config.get('n_trials', 30)} trials "
                  f"and {hp_tuning_config.get('cv_folds', 5)}-fold cross-validation..." )
@@ -140,8 +136,7 @@ if need_tuning:
     # Perform hyperparameter tuning
     with torch.amp.autocast( enabled = True, device_type = device.type ):
         best_params = trainer.hyperparameter_tuning(
-            X_train = X_train,
-            y_train = y_train,
+            dataset = train_dataset,
             n_epochs = hp_tuning_config.get( 'n_epochs', 10 ),
             n_trials = hp_tuning_config.get( 'n_trials', 30 ),
             cross_validation = hp_tuning_config.get( 'cv_folds', 5 )

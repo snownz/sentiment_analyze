@@ -12,9 +12,9 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau, OneCycleLR
 import optuna
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
-from src.models import LSTMSentimentModel, DistilBertForSequenceClassification
+from src.models import LSTMSentimentModel, DistilBERTSentimentModel
 import gc
 import pandas as pd
 
@@ -50,8 +50,8 @@ class ModelTrainer:
         self.val_loader = val_loader
         self.test_loader = test_loader
         self.optimizer_name = optimizer_name.lower()
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
+        self.learning_rate = float( learning_rate )
+        self.weight_decay = float( weight_decay )
         self.name = name
         
         # Set device
@@ -83,17 +83,7 @@ class ModelTrainer:
         os.makedirs( os.path.join( 'results', self.name ), exist_ok = True )
     
     def _get_optimizer(self, name=None, lr=None, wd=None):
-        """
-        Get optimizer based on name.
         
-        Args:
-            name: Optimizer name (if None, use self.optimizer_name)
-            lr: Learning rate (if None, use self.learning_rate)
-            wd: Weight decay (if None, use self.weight_decay)
-            
-        Returns:
-            PyTorch optimizer
-        """
         if name is None:
             name = self.optimizer_name
         if lr is None:
@@ -128,16 +118,7 @@ class ModelTrainer:
             )
     
     def get_scheduler(self, scheduler_name='plateau', epochs=10):
-        """
-        Get learning rate scheduler.
         
-        Args:
-            scheduler_name: Name of the scheduler (plateau, onecycle)
-            epochs: Number of epochs
-            
-        Returns:
-            PyTorch scheduler
-        """
         if scheduler_name == 'plateau':
             return ReduceLROnPlateau(
                 self.optimizer,
@@ -157,111 +138,7 @@ class ModelTrainer:
             )
         else:
             return None
-    
-    def train_step(self, batch):
-        """
-        Perform a single training step.
         
-        Args:
-            batch: Batch of data
-            
-        Returns:
-            Loss value
-        """
-        # Set model to training mode
-        self.model.train()
-        
-        # Zero gradients
-        self.optimizer.zero_grad()
-        
-        # Forward pass
-        if isinstance(batch, dict):  # For BERT-based models
-            input_ids = batch['input_ids'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
-            labels = batch['label'].to(self.device)
-            
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            
-            if hasattr(outputs, 'logits'):
-                logits = outputs.logits
-            else:
-                logits = outputs
-            
-            loss = self.criterion(logits, labels)
-        else:  # For LSTM-based models
-            inputs, labels = batch
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
-            
-            outputs = self.model(inputs)
-            loss = self.criterion(outputs, labels)
-        
-        # Backward pass and optimization
-        loss.backward()
-        self.optimizer.step()
-        
-        return loss.item()
-    
-    def eval_step(self, data_loader):
-        """
-        Evaluate the model on a dataset.
-        
-        Args:
-            data_loader: DataLoader for evaluation
-            
-        Returns:
-            loss: Average loss
-            accuracy: Accuracy
-            f1: F1 score (macro-averaged)
-            predictions: Model predictions
-            labels: True labels
-        """
-        # Set model to evaluation mode
-        self.model.eval()
-        
-        # Initialize metrics
-        total_loss = 0
-        all_preds = []
-        all_labels = []
-        
-        # Evaluate without gradient calculation
-        with torch.no_grad():
-            for batch in data_loader:
-                # Forward pass
-                if isinstance(batch, dict):  # For BERT-based models
-                    input_ids = batch['input_ids'].to(self.device)
-                    attention_mask = batch['attention_mask'].to(self.device)
-                    labels = batch['label'].to(self.device)
-                    
-                    outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-                    
-                    if hasattr(outputs, 'logits'):
-                        logits = outputs.logits
-                    else:
-                        logits = outputs
-                else:  # For LSTM-based models
-                    inputs, labels = batch
-                    inputs, labels = inputs.to(self.device), labels.to(self.device)
-                    
-                    logits = self.model(inputs)
-                
-                # Calculate loss
-                loss = self.criterion(logits, labels)
-                total_loss += loss.item() * len(labels)
-                
-                # Get predictions
-                _, preds = torch.max(logits, dim=1)
-                
-                # Store predictions and labels
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(labels.cpu().numpy())
-        
-        # Calculate metrics
-        avg_loss = total_loss / len(data_loader.dataset)
-        accuracy = accuracy_score(all_labels, all_preds)
-        f1 = f1_score(all_labels, all_preds, average='macro')
-        
-        return avg_loss, accuracy, f1, all_preds, all_labels
-    
     def train(self, train_loader, val_loader=None, epochs=10, scheduler_name='plateau', full_train=True):
         """
         Train the model.
@@ -560,7 +437,7 @@ class ModelTrainer:
         
         return accuracy_by_length, f1_by_length
     
-    def hyperparameter_tuning(self, X_train, y_train, n_epochs=2, n_trials=30, cross_validation=5):
+    def hyperparameter_tuning(self, dataset, n_epochs=2, n_trials=30, cross_validation=5):
         """
         Perform hyperparameter tuning using Optuna with cross-validation.
         
@@ -577,15 +454,8 @@ class ModelTrainer:
 
         # Define objective function for Optuna
         def objective(trial):
-            
-            # Define hyperparameters to optimize
-            params = {
-                'optimizer': trial.suggest_categorical( 'optimizer', [ 'adam', 'adamw', 'sgd', 'rmsprop' ] ),
-                'learning_rate': trial.suggest_float( 'learning_rate', 1e-5, 1e-2, log = True ),
-                'weight_decay': trial.suggest_float( 'weight_decay', 1e-6, 1e-3, log = True ),
-                'batch_size': trial.suggest_categorical( 'batch_size', [ 512, 1024, 2048 ] ),
-            }
-            
+
+            params = {}            
             # Add model-specific hyperparameters
             if hasattr(self, 'is_lstm') and self.is_lstm:
                 params.update({
@@ -594,10 +464,18 @@ class ModelTrainer:
                     'dropout': trial.suggest_float( 'dropout', 0.1, 0.5 ),
                     'bidirectional': trial.suggest_categorical( 'bidirectional', [ True, False ] ),
                     'attention': trial.suggest_categorical( 'attention', [ True, False ] ),
+                    'optimizer': trial.suggest_categorical( 'optimizer', [ 'adam', 'adamw', 'sgd', 'rmsprop' ] ),
+                    'learning_rate': trial.suggest_float( 'learning_rate', 1e-5, 1e-2, log = True ),
+                    'weight_decay': trial.suggest_float( 'weight_decay', 1e-6, 1e-3, log = True ),
+                    'batch_size': trial.suggest_categorical( 'batch_size', [ 512, 1024, 2048 ] ),
                 })
             else:  # DistilBERT-specific hyperparameters
                 params.update({
                     'dropout': trial.suggest_float( 'dropout', 0.1, 0.3 ),
+                    'optimizer': trial.suggest_categorical( 'optimizer', [ 'adam', 'adamw', 'sgd', 'rmsprop' ] ),
+                    'learning_rate': trial.suggest_float( 'learning_rate', 1e-5, 1e-2, log = True ),
+                    'weight_decay': trial.suggest_float( 'weight_decay', 1e-6, 1e-3, log = True ),
+                    'batch_size': trial.suggest_categorical( 'batch_size', [ 32, 64, 512 ] ),
                 })
             
             print("========================================")
@@ -609,22 +487,22 @@ class ModelTrainer:
             
             f1_scores = []
             
-            for fold, ( train_idx, val_idx ) in enumerate( kf.split( X_train ) ):
+            for fold, ( train_idx, val_idx ) in enumerate( kf.split( dataset ) ):
                 
                 # Reset model for each fold
                 self._reset_model(params)
+
+                train_subset = Subset( dataset, train_idx )
+                val_subset = Subset( dataset, val_idx )
                 
                 # Get fold data
-                X_train_fold, X_val_fold = X_train[train_idx], X_train[val_idx]
-                y_train_fold, y_val_fold = y_train[train_idx], y_train[val_idx]
-
-                train_loader = DataLoader(
-                    list( zip( X_train_fold, y_train_fold ) ),
+                train_loader = DataLoader( 
+                    train_subset, 
                     batch_size = params['batch_size'],
                     shuffle = True
                 )
-                val_loader = DataLoader(
-                    list( zip( X_val_fold, y_val_fold ) ),
+                val_loader = DataLoader( 
+                    val_subset, 
                     batch_size = params['batch_size'],
                     shuffle = False
                 )
@@ -728,6 +606,44 @@ class LSTMTrainer(ModelTrainer):
         
         return loss.item()
     
+    def eval_step(self, data_loader):
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        
+        # Initialize metrics
+        total_loss = 0
+        all_preds = []
+        all_labels = []
+        
+        # Evaluate without gradient calculation
+        with torch.no_grad():
+
+            for batch in data_loader:
+
+                inputs, labels = batch
+                inputs, labels = inputs.to( self.device ), labels.to( self.device )
+                
+                logits = self.model( inputs )
+                
+                # Calculate loss
+                loss = self.criterion( logits, labels )
+                total_loss += loss.item() * len( labels )
+                
+                # Get predictions
+                _, preds = torch.max( logits, dim = 1 )
+                
+                # Store predictions and labels
+                all_preds.extend( preds.cpu().numpy() )
+                all_labels.extend( labels.cpu().numpy() )
+        
+        # Calculate metrics
+        avg_loss = total_loss / len( data_loader.dataset )
+        accuracy = accuracy_score( all_labels, all_preds )
+        f1 = f1_score( all_labels, all_preds, average = 'macro' )
+        
+        return avg_loss, accuracy, f1, all_preds, all_labels
+
     def _reset_model(self, params):
         
         """
@@ -815,19 +731,9 @@ class DistilBERTTrainer(ModelTrainer):
         
         # Forward pass
         outputs = self.model( input_ids = input_ids, attention_mask = attention_mask )
-        
-        if hasattr(outputs, 'loss'):
-            # Use the loss calculated by the model
-            loss = outputs.loss
-        else:
-            # Calculate loss manually
-            if hasattr(outputs, 'logits'):
-                logits = outputs.logits
-            else:
-                logits = outputs
-            
-            loss = self.criterion(logits, labels)
-        
+        logist = outputs.logits
+        loss = self.criterion( logist, labels )
+
         # Backward pass and optimization
         loss.backward()
         
@@ -838,6 +744,47 @@ class DistilBERTTrainer(ModelTrainer):
         
         return loss.item()
     
+    def eval_step(self, data_loader):
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        
+        # Initialize metrics
+        total_loss = 0
+        all_preds = []
+        all_labels = []
+        
+        # Evaluate without gradient calculation
+        with torch.no_grad():
+            
+            for batch in data_loader:
+                # Forward pass
+
+                input_ids = batch['input_ids'].to( self.device )
+                attention_mask = batch['attention_mask'].to( self.device )
+                labels = batch['label'].to( self.device )
+                
+                outputs = self.model( input_ids = input_ids, attention_mask = attention_mask )
+                logits = outputs.logits
+               
+                # Calculate loss
+                loss = self.criterion( logits, labels )
+                total_loss += loss.item() * len( labels )
+                
+                # Get predictions
+                _, preds = torch.max( logits, dim = 1 )
+                
+                # Store predictions and labels
+                all_preds.extend( preds.cpu().numpy() )
+                all_labels.extend( labels.cpu().numpy() )
+        
+        # Calculate metrics
+        avg_loss = total_loss / len( data_loader.dataset )
+        accuracy = accuracy_score( all_labels, all_preds )
+        f1 = f1_score( all_labels, all_preds, average = 'macro' )
+        
+        return avg_loss, accuracy, f1, all_preds, all_labels
+
     def _reset_model(self, params):
         """
         Reset DistilBERT model with new hyperparameters.
@@ -867,11 +814,12 @@ class DistilBERTTrainer(ModelTrainer):
         del self.model
         gc.collect()
         torch.cuda.empty_cache()
-        self.model = DistilBertForSequenceClassification(
+        self.model = DistilBERTSentimentModel(
             num_classes = num_classes,
             dropout = params.get( 'dropout', 0.1 ),
             pretrained_model = pretrained_model
         )
+        self.model.to( self.device )
 
         # Re-initialize optimizer
         self.optimizer = self._get_optimizer()

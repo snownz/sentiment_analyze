@@ -289,7 +289,7 @@ class YelpDataProcessor:
             raise ValueError("BPE tokenizer has not been trained or loaded")
         
         sequences = []
-        for text in texts:
+        for text in tqdm(texts):
             encoded = self.lstm_tokenizer.encode(text)
             sequences.append(encoded.ids)
         
@@ -309,7 +309,7 @@ class YelpDataProcessor:
             raise ValueError("Word vocabulary has not been built")
         
         sequences = []
-        for text in texts:
+        for text in tqdm(texts):
             seq = []
             for word in text.split():
                 if word in self.word_to_idx:
@@ -392,9 +392,9 @@ class YelpDataProcessor:
             List of sequences
         """
         if self.tokenization_method == 'bpe':
-            return self.texts_to_sequences_bpe(texts)
+            return self.texts_to_sequences_bpe( texts )
         else:  # Default to word tokenization
-            return self.texts_to_sequences_word(texts)
+            return self.texts_to_sequences_word( texts )
     
     def pad_sequences(self, sequences, maxlen=None):
         """
@@ -412,10 +412,10 @@ class YelpDataProcessor:
         
         padded_sequences = []
         for seq in sequences:
-            if len(seq) > maxlen:
-                padded_sequences.append(seq[:maxlen])
+            if len( seq ) > maxlen:
+                padded_sequences.append( seq[:maxlen] )
             else:
-                padded_sequences.append(seq + [0] * (maxlen - len(seq)))
+                padded_sequences.append( seq + [0] * ( maxlen - len( seq ) ) )
         
         return np.array(padded_sequences)
     
@@ -441,14 +441,18 @@ class YelpDataProcessor:
         
         # Encode sentiment labels
         logger.info("Encoding labels")
-        self.label_encoder = LabelEncoder()
-        encoded_labels = self.label_encoder.fit_transform( df['sentiment'] )
-        
-        # Save label encoder
-        os.makedirs('models', exist_ok=True)
-        with open('models/label_encoder.pkl', 'wb') as f:
-            pickle.dump(self.label_encoder, f)
-        
+        if os.path.exists('models/label_encoder.pkl'):
+            with open('models/label_encoder.pkl', 'rb') as f:
+                self.label_encoder = pickle.load(f)
+                encoded_labels = self.label_encoder.transform(df['sentiment'])
+        else:
+            self.label_encoder = LabelEncoder()
+            encoded_labels = self.label_encoder.fit_transform( df['sentiment'] )
+            # Save label encoder
+            os.makedirs('models', exist_ok=True)
+            with open('models/label_encoder.pkl', 'wb') as f:
+                pickle.dump(self.label_encoder, f)
+            
         # Split into train, validation, and test sets
         logger.info("Splitting data into train, validation, and test sets")
         X_train_val, X_test, y_train_val, y_test = train_test_split(
@@ -500,7 +504,15 @@ class YelpDataProcessor:
         val_dataset = torch.utils.data.TensorDataset(X_val_tensor, y_val_tensor)
         test_dataset = torch.utils.data.TensorDataset(X_test_tensor, y_test_tensor)
         
-        train_loader = DataLoader(train_dataset, batch_size=self.batch_size, shuffle=True)
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=self.batch_size, 
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            drop_last=True,
+            timeout=60
+        )
         val_loader = DataLoader(val_dataset, batch_size=self.batch_size)
         test_loader = DataLoader(test_dataset, batch_size=self.batch_size)
         
@@ -508,7 +520,7 @@ class YelpDataProcessor:
         logger.info(f"Validation data: {len(val_dataset)} samples")
         logger.info(f"Test data: {len(test_dataset)} samples")
         
-        return train_loader, val_loader, test_loader, df
+        return train_dataset, train_loader, val_loader, test_loader, df
     
     def prepare_data_bert(self, df=None):
         """
@@ -527,18 +539,21 @@ class YelpDataProcessor:
         
         # Preprocess text
         logger.info("Preprocessing text")
-        df['processed_text'] = df['text'].apply(self.preprocess_text)
+        df['processed_text'] = df['text'].progress_apply( self.preprocess_text )
         
         # Encode sentiment labels
         logger.info("Encoding labels")
-        self.label_encoder = LabelEncoder()
-        encoded_labels = self.label_encoder.fit_transform(df['sentiment'])
-        
-        # Save label encoder
-        os.makedirs('models', exist_ok=True)
-        with open('models/label_encoder.pkl', 'wb') as f:
-            pickle.dump(self.label_encoder, f)
-        
+        if os.path.exists('models/label_encoder.pkl'):
+            with open('models/label_encoder.pkl', 'rb') as f:
+                self.label_encoder = pickle.load(f)
+                encoded_labels = self.label_encoder.transform(df['sentiment'])
+        else:
+            self.label_encoder = LabelEncoder()
+            encoded_labels = self.label_encoder.fit_transform(df['sentiment'])
+            os.makedirs('models', exist_ok=True)
+            with open('models/label_encoder.pkl', 'wb') as f:
+                pickle.dump(self.label_encoder, f)
+            
         # Split into train, validation, and test sets
         logger.info("Splitting data into train, validation, and test sets")
         X_train_val, X_test, y_train_val, y_test = train_test_split(
@@ -559,7 +574,11 @@ class YelpDataProcessor:
         train_dataloader = DataLoader(
             train_dataset,
             batch_size=self.batch_size,
-            shuffle=True
+            shuffle=True,
+            num_workers=4,
+            pin_memory=True,
+            drop_last=True,
+            timeout=60
         )
         
         val_dataloader = DataLoader(
@@ -576,7 +595,7 @@ class YelpDataProcessor:
         logger.info(f"Validation data: {len(val_dataset)} samples")
         logger.info(f"Test data: {len(test_dataset)} samples")
         
-        return train_dataloader, val_dataloader, test_dataloader, df
+        return train_dataset, train_dataloader, val_dataloader, test_dataloader, df
 
 class YelpBertDataset(Dataset):
     """PyTorch Dataset for Yelp reviews using BERT-based models."""
