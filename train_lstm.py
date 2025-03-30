@@ -60,13 +60,14 @@ logger.info( f"Using device: {device}" )
 data_processor = YelpDataProcessor(
     data_path = data_config.get( 'path' ),
     max_length = data_config.get( 'max_length', 128 ),
-    batch_size = data_config.get( 'batch_size', 32 )
+    batch_size = data_config.get( 'batch_size', 32 ),
+    tokenization_method = data_config.get( 'tokenization_method', 'bpe' )
 )
 
 # Prepare data
 logger.info( "Preparing data..." )
 train_loader, val_loader, test_loader, df = data_processor.prepare_data_lstm(
-    max_vocab_size=data_config.get( 'max_vocab_size', 10000 )
+    max_vocab_size = data_config.get( 'max_vocab_size', 10000 )
 )
 
 # Apply best parameters if they exist, otherwise use defaults from config
@@ -163,7 +164,7 @@ if need_tuning:
         dropout = best_params.get( 'dropout', effective_model_config.get( 'dropout', 0.2 ) ),
         use_attention = best_params.get( 'attention', effective_model_config.get( 'use_attention', True ) ),
         max_length = data_config.get( 'max_length', 128 ),
-        padding_idx = 0
+        padding_idx = 0,
     )
     
     # Reinitialize trainer with best parameters
@@ -175,7 +176,8 @@ if need_tuning:
         optimizer_name = best_params.get( 'optimizer', effective_training_config.get( 'optimizer', 'adam' ) ),
         learning_rate = best_params.get( 'learning_rate', effective_training_config.get( 'learning_rate', 0.001 ) ),
         weight_decay = best_params.get( 'weight_decay', effective_training_config.get( 'weight_decay', 0.0 ) ),
-        device = device
+        device = device,
+        name = config.get( 'name', 'lstm_model' ),
     )
 
 # Print model summary

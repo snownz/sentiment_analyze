@@ -181,34 +181,35 @@ def create_synthetic_dataset(output_file, n_samples=5000):
     business_ids = [f"business_{i}" for i in range(100)]  # 100 fictional businesses
     user_ids = [f"user_{i}" for i in range(500)]  # 500 fictional users
     
-    for _ in range(n_samples):
+    for _ in range( n_samples ):
+
         # Randomly select sentiment
-        sentiment = np.random.choice(["positive", "neutral", "negative"], p=[0.5, 0.3, 0.2])
+        sentiment = np.random.choice( [ "positive", "neutral", "negative" ], p = [ 0.5, 0.3, 0.2 ] )
         
         if sentiment == "positive":
             # 80% generated from templates, 20% from samples
             if np.random.random() < 0.8:
-                template = np.random.choice(positive_templates)
-                text = fill_template(template, positive_words)
+                template = np.random.choice( positive_templates )
+                text = fill_template( template, positive_words )
             else:
-                text = np.random.choice(positive_reviews)
-            stars = np.random.choice([4, 5], p=[0.3, 0.7])
+                text = np.random.choice( positive_reviews )
+            stars = np.random.choice( [ 4, 5 ], p = [ 0.3, 0.7 ] )
         
         elif sentiment == "neutral":
             if np.random.random() < 0.8:
-                template = np.random.choice(neutral_templates)
-                text = fill_template(template, neutral_words)
+                template = np.random.choice( neutral_templates )
+                text = fill_template( template, neutral_words )
             else:
-                text = np.random.choice(neutral_reviews)
+                text = np.random.choice( neutral_reviews )
             stars = 3
         
         else:  # negative
             if np.random.random() < 0.8:
-                template = np.random.choice(negative_templates)
-                text = fill_template(template, negative_words)
+                template = np.random.choice( negative_templates )
+                text = fill_template( template, negative_words )
             else:
-                text = np.random.choice(negative_reviews)
-            stars = np.random.choice([1, 2], p=[0.7, 0.3])
+                text = np.random.choice( negative_reviews )
+            stars = np.random.choice( [1, 2], p = [ 0.7, 0.3 ] )
         
         # Create review entry
         review = {
@@ -223,18 +224,18 @@ def create_synthetic_dataset(output_file, n_samples=5000):
             "date": f"2023-{np.random.randint(1, 13):02d}-{np.random.randint(1, 29):02d}"
         }
         
-        reviews.append(review)
+        reviews.append( review )
     
     # Convert to DataFrame
-    df = pd.DataFrame(reviews)
+    df = pd.DataFrame( reviews )
     
     # Ensure the output directory exists
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    os.makedirs( os.path.dirname( output_file ), exist_ok = True )
     
     # Save to JSON file (line by line format)
-    df.to_json(output_file, orient='records', lines=True)
+    df.to_json( output_file, orient = 'records', lines = True )
     
-    print(f"Created synthetic dataset with {len(df)} reviews at {output_file}")
+    print( f"Created synthetic dataset with {len(df)} reviews at {output_file}" )
 
 def compare_models(lstm_results, distilbert_results, df, class_names=None):
     """
@@ -247,10 +248,10 @@ def compare_models(lstm_results, distilbert_results, df, class_names=None):
         class_names: Names of the classes
     """
     if class_names is None:
-        class_names = ['negative', 'neutral', 'positive']
+        class_names = [ 'negative', 'neutral', 'positive' ]
     
     # Create directory for comparisons
-    os.makedirs('results/comparison', exist_ok=True)
+    os.makedirs( 'results/comparison', exist_ok = True )
     
     # Compare accuracy
     accuracies = {
@@ -258,14 +259,14 @@ def compare_models(lstm_results, distilbert_results, df, class_names=None):
         'DistilBERT': distilbert_results['accuracy']
     }
     
-    plt.figure(figsize=(8, 6))
-    sns.barplot(x=list(accuracies.keys()), y=list(accuracies.values()))
-    plt.title('Model Accuracy Comparison')
-    plt.xlabel('Model')
-    plt.ylabel('Accuracy')
-    plt.ylim(0, 1.0)
+    plt.figure( figsize = ( 8, 6 ) )
+    sns.barplot( x = list( accuracies.keys() ), y = list( accuracies.values() ) )
+    plt.title( 'Model Accuracy Comparison' )
+    plt.xlabel( 'Model' )
+    plt.ylabel( 'Accuracy' )
+    plt.ylim( 0, 1.0 )
     plt.tight_layout()
-    plt.savefig('results/comparison/accuracy.png')
+    plt.savefig( 'results/comparison/accuracy.png' )
     plt.close()
     
     # Compare performance by class
@@ -282,42 +283,42 @@ def compare_models(lstm_results, distilbert_results, df, class_names=None):
         }
         
         for cls in class_names:
-            metric_data['Class'].append(cls)
-            metric_data['LSTM'].append(lstm_report[cls][metric])
-            metric_data['DistilBERT'].append(distilbert_report[cls][metric])
+            metric_data['Class'].append( cls )
+            metric_data['LSTM'].append( lstm_report[cls][metric] )
+            metric_data['DistilBERT'].append( distilbert_report[cls][metric] )
         
-        metric_df = pd.DataFrame(metric_data)
+        metric_df = pd.DataFrame( metric_data )
         
-        plt.figure(figsize=(10, 6))
-        sns.barplot(x='Class', y='value', hue='Model', 
-                   data=pd.melt(metric_df, id_vars=['Class'], 
-                                value_vars=['LSTM', 'DistilBERT'], 
-                                var_name='Model', value_name='value'))
-        plt.title(f'{metric.capitalize()} by Class')
-        plt.xlabel('Class')
-        plt.ylabel(metric.capitalize())
-        plt.ylim(0, 1.0)
+        plt.figure( figsize = ( 10, 6 ) )
+        sns.barplot( x = 'Class', y = 'value', hue = 'Model', 
+                     data = pd.melt( metric_df, id_vars = ['Class'], 
+                                     value_vars = ['LSTM', 'DistilBERT'], 
+                                     var_name = 'Model', value_name = 'value' ) )
+        plt.title( f'{metric.capitalize()} by Class' )
+        plt.xlabel( 'Class' )
+        plt.ylabel( metric.capitalize() )
+        plt.ylim( 0, 1.0 )
         plt.tight_layout()
-        plt.savefig(f'results/comparison/{metric}.png')
+        plt.savefig( f'results/comparison/{metric}.png' )
         plt.close()
     
     # Compare confusion matrices
-    fig, axs = plt.subplots(1, 2, figsize=(16, 6))
+    fig, axs = plt.subplots( 1, 2, figsize = ( 16, 6 ) )
     
-    sns.heatmap(lstm_results['confusion_matrix'], annot=True, fmt='d', cmap='Blues', 
-               xticklabels=class_names, yticklabels=class_names, ax=axs[0])
-    axs[0].set_title('LSTM Confusion Matrix')
-    axs[0].set_xlabel('Predicted')
-    axs[0].set_ylabel('True')
+    sns.heatmap( lstm_results['confusion_matrix'], annot = True, fmt = 'd', cmap = 'Blues', 
+                 xticklabels = class_names, yticklabels = class_names, ax = axs[0] )
+    axs[0].set_title( 'LSTM Confusion Matrix' )
+    axs[0].set_xlabel( 'Predicted' )
+    axs[0].set_ylabel( 'True' )
     
-    sns.heatmap(distilbert_results['confusion_matrix'], annot=True, fmt='d', cmap='Blues', 
-               xticklabels=class_names, yticklabels=class_names, ax=axs[1])
-    axs[1].set_title('DistilBERT Confusion Matrix')
-    axs[1].set_xlabel('Predicted')
-    axs[1].set_ylabel('True')
+    sns.heatmap( distilbert_results['confusion_matrix'], annot = True, fmt = 'd', cmap = 'Blues', 
+                 xticklabels = class_names, yticklabels = class_names, ax = axs[1] )
+    axs[1].set_title( 'DistilBERT Confusion Matrix' )
+    axs[1].set_xlabel( 'Predicted' )
+    axs[1].set_ylabel( 'True' )
     
     plt.tight_layout()
-    plt.savefig('results/comparison/confusion_matrices.png')
+    plt.savefig( 'results/comparison/confusion_matrices.png' )
     plt.close()
     
     # Save comparison results
@@ -332,13 +333,13 @@ def compare_models(lstm_results, distilbert_results, df, class_names=None):
         }
     }
     
-    with open('results/comparison/results.json', 'w') as f:
-        json.dump(comparison, f, indent=2)
+    with open( 'results/comparison/results.json', 'w ') as f:
+        json.dump( comparison, f, indent = 2 )
     
     # Print results
-    print("\nModel Comparison:")
-    print(f"LSTM Accuracy: {lstm_results['accuracy']:.4f}")
-    print(f"DistilBERT Accuracy: {distilbert_results['accuracy']:.4f}")
+    print( "\nModel Comparison:" )
+    print( f"LSTM Accuracy: {lstm_results['accuracy']:.4f}" )
+    print( f"DistilBERT Accuracy: {distilbert_results['accuracy']:.4f}" )
     
     print("\nLSTM Classification Report:")
     for cls in class_names:

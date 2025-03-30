@@ -6,6 +6,7 @@ data:
   max_length: 128
   max_vocab_size: 10000
   batch_size: 32
+  tokenization_method: bpe  # Options: bpe, word
 
 # Model architecture
 model:
