@@ -688,9 +688,7 @@ class ModelTrainer:
         raise NotImplementedError("Subclasses must implement _reset_model")
 
 class LSTMTrainer(ModelTrainer):
-    """
-    Trainer specifically for LSTM-based models.
-    """
+    
     def __init__(self, *args, **kwargs):
         super( LSTMTrainer, self ).__init__( *args, **kwargs )
         self.is_lstm = True
@@ -789,9 +787,7 @@ class LSTMTrainer(ModelTrainer):
         self.optimizer = self._get_optimizer()
 
 class DistilBERTTrainer(ModelTrainer):
-    """
-    Trainer specifically for DistilBERT-based models.
-    """
+    
     def __init__(self, *args, **kwargs):
         super(DistilBERTTrainer, self).__init__(*args, **kwargs)
         self.is_lstm = False
@@ -818,7 +814,7 @@ class DistilBERTTrainer(ModelTrainer):
         labels = batch['label'].to(self.device)
         
         # Forward pass
-        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        outputs = self.model( input_ids = input_ids, attention_mask = attention_mask )
         
         if hasattr(outputs, 'loss'):
             # Use the loss calculated by the model
@@ -836,7 +832,7 @@ class DistilBERTTrainer(ModelTrainer):
         loss.backward()
         
         # Clip gradients to prevent exploding gradients
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_( self.model.parameters(), max_norm = 1.0 )
         
         self.optimizer.step()
         
@@ -864,5 +860,18 @@ class DistilBERTTrainer(ModelTrainer):
         if 'weight_decay' in params:
             self.weight_decay = params['weight_decay']
         
+        pretrained_model = params.get( 'pretrained_model', self.model.pretrained_model )
+        num_classes = params.get( 'num_classes', self.model.num_classes )
+
+        # Re-initialize model
+        del self.model
+        gc.collect()
+        torch.cuda.empty_cache()
+        self.model = DistilBertForSequenceClassification(
+            num_classes = num_classes,
+            dropout = params.get( 'dropout', 0.1 ),
+            pretrained_model = pretrained_model
+        )
+
         # Re-initialize optimizer
         self.optimizer = self._get_optimizer()

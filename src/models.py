@@ -66,15 +66,7 @@ class LSTMSentimentModel(nn.Module):
         )
     
     def forward(self, x):
-        """
-        Forward pass.
         
-        Args:
-            x: Input tensor of shape (batch_size, seq_len)
-            
-        Returns:
-            Output tensor of shape (batch_size, num_classes)
-        """
         # Get embeddings
         embedded = self.embedding( x )  # (batch_size, seq_len, embedding_dim)
         
@@ -93,19 +85,13 @@ class LSTMSentimentModel(nn.Module):
         return output
 
 class DistilBERTSentimentModel(nn.Module):
-    """
-    DistilBERT-based model for sentiment analysis.
-    """
+    
     def __init__(self, num_classes=3, dropout=0.1, pretrained_model='distilbert-base-uncased'):
-        """
-        Initialize the DistilBERT model.
         
-        Args:
-            num_classes: Number of output classes
-            dropout: Dropout rate
-            pretrained_model: Name of the pretrained model
-        """
         super( DistilBERTSentimentModel, self ).__init__()
+        self.num_classes = num_classes
+        self.dropout = dropout
+        self.pretrained_model = pretrained_model
         
         # Load pretrained DistilBERT model
         self.distilbert = DistilBertForSequenceClassification.from_pretrained(
@@ -130,9 +116,9 @@ class DistilBERTSentimentModel(nn.Module):
             Output tensor with logits of shape (batch_size, num_classes)
         """
         outputs = self.distilbert(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            return_dict=True
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            return_dict = True
         )
         
         return outputs

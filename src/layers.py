@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class LSTMLayer(nn.Module):
+    
     def __init__(self, input_size, hidden_size, num_layers, batch_first, bidirectional=True, dropout=0.1):
    
         super(LSTMLayer, self).__init__()
