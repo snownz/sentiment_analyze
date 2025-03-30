@@ -32,19 +32,7 @@ class ModelTrainer:
         device=None,
         name=None
     ):
-        """
-        Initialize the trainer.
         
-        Args:
-            model: PyTorch model
-            train_loader: DataLoader for training data
-            val_loader: DataLoader for validation data
-            test_loader: DataLoader for test data
-            optimizer_name: Name of the optimizer (adam, sgd, rmsprop)
-            learning_rate: Learning rate
-            weight_decay: Weight decay for regularization
-            device: Device to train on (cpu or cuda)
-        """
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -90,29 +78,30 @@ class ModelTrainer:
             lr = self.learning_rate
         if wd is None:
             wd = self.weight_decay
-            
+        
+        parameters = [ param for param in self.model.parameters() if param.requires_grad ]
         if name == 'sgd':
             return optim.SGD(
-                self.model.parameters(),
+                parameters,
                 lr = lr,
                 momentum = 0.9,
                 weight_decay = wd
             )
         elif name == 'rmsprop':
             return optim.RMSprop(
-                self.model.parameters(),
+                parameters,
                 lr = lr,
                 weight_decay = wd
             )
         elif name == 'adamw':
             return optim.AdamW(
-                self.model.parameters(),
+                parameters,
                 lr = lr,
                 weight_decay = wd
             )
         else:  # Default to Adam
             return optim.Adam(
-                self.model.parameters(),
+                parameters,
                 lr = lr,
                 weight_decay = wd
             )
@@ -140,17 +129,7 @@ class ModelTrainer:
             return None
         
     def train(self, train_loader, val_loader=None, epochs=10, scheduler_name='plateau', full_train=True):
-        """
-        Train the model.
         
-        Args:
-            epochs: Number of epochs
-            scheduler_name: Name of the scheduler
-            full_train: Whether to train, validate and save the model
-            
-        Returns:
-            Training history
-        """
         # Get scheduler
         scheduler = self.get_scheduler( scheduler_name, epochs )
         
@@ -238,16 +217,7 @@ class ModelTrainer:
         return self.history
     
     def evaluate(self, loader, class_names=None):
-        """
-        Evaluate the model on the test set.
-        
-        Args:
-            class_names: Names of the classes
-            
-        Returns:
-            Evaluation metrics
-        """
-        
+                
         # Load best model
         # if os.path.exists('models/model_best_f1.pt'):
         if os.path.exists( os.path.join( 'models', self.name, 'model_best_f1.pt' ) ):
@@ -296,9 +266,7 @@ class ModelTrainer:
         return results, test_preds, test_labels
     
     def plot_history(self):
-        """
-        Plot training history.
-        """
+        
         # Create a figure with subplots
         plt.figure(figsize=(20, 5))
         
@@ -340,18 +308,7 @@ class ModelTrainer:
         plt.close()
     
     def analyze_by_length(self, df, test_preds, test_labels):
-        """
-        Analyze model performance by review length.
-        
-        Args:
-            df: DataFrame with processed texts
-            test_preds: Model predictions
-            test_labels: True labels
-            
-        Returns:
-            Accuracy by length category
-        """
-        
+                
         # Get test set indices
         test_size = len( test_labels )
         test_texts = df['processed_text'].iloc[-test_size:].reset_index( drop = True )
@@ -438,20 +395,7 @@ class ModelTrainer:
         return accuracy_by_length, f1_by_length
     
     def hyperparameter_tuning(self, dataset, n_epochs=2, n_trials=30, cross_validation=5):
-        """
-        Perform hyperparameter tuning using Optuna with cross-validation.
         
-        Args:
-            X_train: Training data
-            y_train: Training labels
-            n_epochs: Number of epochs for training
-            n_trials: Number of Optuna trials
-            cross_validation: Number of cross-validation folds
-            
-        Returns:
-            Best hyperparameters
-        """
-
         # Define objective function for Optuna
         def objective(trial):
 
@@ -557,31 +501,18 @@ class ModelTrainer:
         return best_params
     
     def _reset_model(self, params):
-        """
-        Reset model with new hyperparameters. To be implemented by subclasses.
         
-        Args:
-            params: New hyperparameters
-        """
         raise NotImplementedError("Subclasses must implement _reset_model")
 
 class LSTMTrainer(ModelTrainer):
     
     def __init__(self, *args, **kwargs):
+
         super( LSTMTrainer, self ).__init__( *args, **kwargs )
         self.is_lstm = True
     
     def train_step(self, batch):
         
-        """
-        Perform a single training step for LSTM model.
-        
-        Args:
-            batch: Batch of data (inputs, labels)
-            
-        Returns:
-            Loss value
-        """
         # Set model to training mode
         self.model.train()
         
@@ -646,12 +577,6 @@ class LSTMTrainer(ModelTrainer):
 
     def _reset_model(self, params):
         
-        """
-        Reset LSTM model with new hyperparameters.
-        
-        Args:
-            params: New hyperparameters
-        """
         # Update model parameters if needed
         if hasattr(self.model, 'hidden_size') and 'hidden_size' in params:
             hidden_size = params['hidden_size']
@@ -705,19 +630,12 @@ class LSTMTrainer(ModelTrainer):
 class DistilBERTTrainer(ModelTrainer):
     
     def __init__(self, *args, **kwargs):
+
         super(DistilBERTTrainer, self).__init__(*args, **kwargs)
         self.is_lstm = False
     
     def train_step(self, batch):
-        """
-        Perform a single training step for DistilBERT model.
         
-        Args:
-            batch: Batch of data (dict with input_ids, attention_mask, labels)
-            
-        Returns:
-            Loss value
-        """
         # Set model to training mode
         self.model.train()
         
@@ -730,8 +648,7 @@ class DistilBERTTrainer(ModelTrainer):
         labels = batch['label'].to(self.device)
         
         # Forward pass
-        outputs = self.model( input_ids = input_ids, attention_mask = attention_mask )
-        logist = outputs.logits
+        logist = self.model( input_ids = input_ids, attention_mask = attention_mask )
         loss = self.criterion( logist, labels )
 
         # Backward pass and optimization
@@ -756,7 +673,7 @@ class DistilBERTTrainer(ModelTrainer):
         
         # Evaluate without gradient calculation
         with torch.no_grad():
-            
+
             for batch in data_loader:
                 # Forward pass
 
@@ -764,8 +681,7 @@ class DistilBERTTrainer(ModelTrainer):
                 attention_mask = batch['attention_mask'].to( self.device )
                 labels = batch['label'].to( self.device )
                 
-                outputs = self.model( input_ids = input_ids, attention_mask = attention_mask )
-                logits = outputs.logits
+                logits = self.model( input_ids = input_ids, attention_mask = attention_mask )
                
                 # Calculate loss
                 loss = self.criterion( logits, labels )
@@ -786,12 +702,7 @@ class DistilBERTTrainer(ModelTrainer):
         return avg_loss, accuracy, f1, all_preds, all_labels
 
     def _reset_model(self, params):
-        """
-        Reset DistilBERT model with new hyperparameters.
         
-        Args:
-            params: New hyperparameters
-        """
         # Update model parameters if needed
         if hasattr(self.model, 'dropout') and 'dropout' in params:
             if hasattr(self.model.distilbert, 'config'):

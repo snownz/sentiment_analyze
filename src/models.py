@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import DistilBertForSequenceClassification
+from transformers import DistilBertForSequenceClassification, DistilBertModel
 from .layers import EmbeddingLayer, LSTMLayer, AttentionLayer
 
 class LSTMSentimentModel(nn.Module):
@@ -76,7 +76,7 @@ class LSTMSentimentModel(nn.Module):
         if self.use_attention:
             # Apply attention
             context, _ = self.attention( lstm_output )  # (batch_size, hidden_size * (2 if bidirectional else 1))
-        else:            
+        else:
             context = lstm_output[:, -1, :]  # (batch_size, hidden_size * (2 if bidirectional else 1))
         
         # Classify
@@ -94,31 +94,31 @@ class DistilBERTSentimentModel(nn.Module):
         self.pretrained_model = pretrained_model
         
         # Load pretrained DistilBERT model
-        self.distilbert = DistilBertForSequenceClassification.from_pretrained(
-            pretrained_model,
-            num_labels = num_classes,
-            output_hidden_states = True,
-            output_attentions = True
-        )
-        
-        # Set dropout
-        self.distilbert.config.dropout = dropout
+        self.bert = DistilBertModel.from_pretrained( "distilbert-base-uncased" )
+        for param in self.bert.parameters():
+            param.requires_grad = False  # freeze BERT
+
+        # Attention layer
+        self.attention = AttentionLayer( 768 ) 
+
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.Dropout( dropout ),
+            nn.Linear( 768, 384 ),  # 768 is the output size of DistilBERT
+            nn.ReLU(),
+            nn.Dropout( dropout ),
+            nn.Linear( 384, num_classes )
+        )        
     
     def forward(self, input_ids, attention_mask=None):
-        """
-        Forward pass.
         
-        Args:
-            input_ids: Input token IDs of shape (batch_size, seq_len)
-            attention_mask: Attention mask of shape (batch_size, seq_len)
-            
-        Returns:
-            Output tensor with logits of shape (batch_size, num_classes)
-        """
-        outputs = self.distilbert(
-            input_ids = input_ids,
-            attention_mask = attention_mask,
-            return_dict = True
-        )
+        # Get BERT outputs
+        with torch.no_grad():
+            outputs = self.bert( input_ids, attention_mask = attention_mask )
         
-        return outputs
+        # Get the last hidden state
+        context, _ = self.attention( outputs.last_hidden_state )
+
+        # Classify
+        logits = self.classifier( context )
+        return logits

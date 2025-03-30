@@ -4,7 +4,7 @@
 data:
   path: data/yelp_reviews.json
   max_length: 128
-  batch_size: 16
+  batch_size: 512
 
 # Model architecture - dropout will be tuned
 model:
@@ -13,7 +13,7 @@ model:
 
 # Training configuration - optimizer, learning_rate, and weight_decay will be tuned
 training:
-  epochs: 4
+  epochs: 100
   optimizer: adamw
   learning_rate: 2e-5
   weight_decay: 0.01
@@ -22,7 +22,7 @@ training:
 
 # Hyperparameter tuning
 hyperparameter_tuning:
-  enabled: true  # Enable hyperparameter tuning
+  enabled: false  # Enable hyperparameter tuning
   n_trials: 20   # Number of trials to run
   cv_folds: 3    # Number of cross-validation folds
   n_epochs: 2  # Number of epochs for each trial
