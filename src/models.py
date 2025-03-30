@@ -21,21 +21,6 @@ class LSTMSentimentModel(nn.Module):
         max_length=None,
         padding_idx=0
     ):
-        """
-        Initialize the LSTM model.
-        
-        Args:
-            vocab_size: Size of the vocabulary
-            embedding_dim: Dimensionality of the embeddings
-            hidden_size: Size of the LSTM hidden state
-            num_classes: Number of output classes
-            num_layers: Number of LSTM layers
-            bidirectional: Whether to use a bidirectional LSTM
-            dropout: Dropout rate
-            use_attention: Whether to use attention mechanism
-            max_length: Maximum sequence length for positional embeddings
-            padding_idx: Index of the padding token
-        """
         super(LSTMSentimentModel, self).__init__()
         
         self.vocab_size = vocab_size
@@ -63,7 +48,7 @@ class LSTMSentimentModel(nn.Module):
             input_size = self.embedding_dim,
             hidden_size = self.hidden_size,
             bidirectional = self.bidirectional,
-            dropout = self.dropout,
+            dropout = self.dropout if self.num_layers > 1 else 0,
             num_layers = self.num_layers,
             batch_first = True
         )

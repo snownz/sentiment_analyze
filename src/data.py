@@ -357,39 +357,40 @@ class YelpDataProcessor:
         # Split into train, validation, and test sets
         logger.info("Splitting data into train, validation, and test sets")
         X_train_val, X_test, y_train_val, y_test = train_test_split(
-            df['processed_text'], encoded_labels, test_size=0.2, stratify=encoded_labels, random_state=42
+            df['processed_text'], encoded_labels, test_size = 0.2, stratify = encoded_labels, random_state = 42
         )
         X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val, y_train_val, test_size=0.25, stratify=y_train_val, random_state=42
+            X_train_val, y_train_val, test_size = 0.25, stratify = y_train_val, random_state = 42
         )
         
         # Create PyTorch datasets
         logger.info("Creating PyTorch datasets")
-        train_dataset = YelpBertDataset(X_train.values, y_train, self.tokenizer, self.max_length)
-        val_dataset = YelpBertDataset(X_val.values, y_val, self.tokenizer, self.max_length)
-        test_dataset = YelpBertDataset(X_test.values, y_test, self.tokenizer, self.max_length)
+        train_dataset = YelpBertDataset( X_train.values, y_train, self.tokenizer, self.max_length )
+        val_dataset = YelpBertDataset( X_val.values, y_val, self.tokenizer, self.max_length )
+        test_dataset = YelpBertDataset( X_test.values, y_test, self.tokenizer, self.max_length )
         
         # Create DataLoaders
-        logger.info(f"Creating DataLoaders with batch size {self.batch_size}")
+        logger.info( f"Creating DataLoaders with batch size {self.batch_size}" )
+        
         train_dataloader = DataLoader(
             train_dataset,
-            batch_size=self.batch_size,
-            shuffle=True
+            batch_size = self.batch_size,
+            shuffle = True
         )
         
         val_dataloader = DataLoader(
             val_dataset,
-            batch_size=self.batch_size
+            batch_size = self.batch_size
         )
         
         test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.batch_size
+            batch_size = self.batch_size
         )
         
-        logger.info(f"Training data: {len(train_dataset)} samples")
-        logger.info(f"Validation data: {len(val_dataset)} samples")
-        logger.info(f"Test data: {len(test_dataset)} samples")
+        logger.info( f"Training data: {len(train_dataset)} samples" )
+        logger.info( f"Validation data: {len(val_dataset)} samples" )
+        logger.info( f"Test data: {len(test_dataset)} samples" )
         
         return train_dataloader, val_dataloader, test_dataloader, df
 

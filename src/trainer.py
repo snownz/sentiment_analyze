@@ -644,7 +644,7 @@ class ModelTrainer:
                     raise optuna.TrialPruned()
             
             # Return average F1 score across folds
-            print( f"Trial {trial.number}: F1 score = { np.mean( f1_scores ):.4f }" )
+            print(f"Trial {trial.number}: F1 score = {np.mean(f1_scores):.4f}")
 
             return np.mean( f1_scores )
         

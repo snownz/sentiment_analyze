@@ -168,19 +168,19 @@ Both models use Optuna for hyperparameter optimization with cross-validation, fo
 
 ### LSTM Hyperparameters Optimized:
 - Optimizer: adam, adamw, sgd, rmsprop
-- Learning rate (1e-5 to 1e-2)
-- Weight decay (1e-6 to 1e-3)
-- Hidden size (32, 64, 128, 256)
-- Embedding dimension (64, 128, 256)
-- Dropout rate (0.1 to 0.5)
-- Bidirectionality (True, False)
-- Attention mechanism (True, False)
+- Learning rate
+- Weight decay
+- Hidden size
+- Embedding dimension
+- Dropout rate
+- Bidirectionality
+- Attention mechanism
 
 ### DistilBERT Hyperparameters Optimized:
 - Optimizer: adam, adamw
-- Learning rate (1e-5 to 1e-2)
-- Weight decay (1e-6 to 1e-3)
-- Dropout rate (0.1 to 0.3)
+- Learning rate
+- Weight decay
+- Dropout rate
 
 ## Results
 
