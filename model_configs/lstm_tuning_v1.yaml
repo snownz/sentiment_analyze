@@ -1,0 +1,36 @@
+# LSTM model configuration for Yelp sentiment analysis with hyperparameter tuning
+
+# Data configuration
+data:
+  path: data/yelp_reviews.json
+  max_length: 128
+  max_vocab_size: 10000
+  batch_size: 128
+
+# Model architecture - these values will be overridden by hyperparameter tuning
+model:
+  embedding_dim: 128
+  hidden_size: 64
+  bidirectional: true
+  dropout: 0.2
+  num_layers: 1
+  use_attention: true
+
+# Training configuration - some values will be overridden by hyperparameter tuning
+training:
+  epochs: 100
+  optimizer: adamw
+  learning_rate: 0.001
+  weight_decay: 0.01
+  scheduler: plateau
+  seed: 42
+
+# Hyperparameter tuning
+hyperparameter_tuning:
+  enabled: true  # Enable hyperparameter tuning
+  n_trials: 30   # Number of trials to run
+  cv_folds: 5   # Number of cross-validation folds
+  n_epochs: 5  # Number of epochs for each trial
+  best_params: null  # Will be filled after tuning
+
+name: lstm_tuning_v1

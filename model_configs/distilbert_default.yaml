@@ -1,0 +1,34 @@
+# DistilBERT model configuration for Yelp sentiment analysis
+
+# Data configuration
+data:
+  path: data/yelp_reviews.json
+  max_length: 128
+  batch_size: 16
+
+# Model architecture
+model:
+  pretrained_model: distilbert-base-uncased
+  dropout: 0.1
+
+# Training configuration
+training:
+  epochs: 4
+  optimizer: adamw  # Options: adam, adamw
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  scheduler: onecycle  # Options: plateau, onecycle, none
+  seed: 42
+
+# Hyperparameter tuning
+hyperparameter_tuning:
+  enabled: false  # Set to true to perform hyperparameter tuning
+  n_trials: 20
+  cv_folds: 3
+  # If hyperparameters have been tuned, their values will be stored here
+  best_params: null
+  # best_params:
+  #   optimizer: adamw
+  #   learning_rate: 5e-5
+  #   weight_decay: 0.01
+  #   dropout: 0.2
