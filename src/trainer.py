@@ -550,7 +550,8 @@ class LSTMTrainer(ModelTrainer):
         # Evaluate without gradient calculation
         with torch.no_grad():
 
-            for batch in data_loader:
+            bar = tqdm( data_loader, desc = "Evaluating", unit = 'batch', total = len( data_loader ) )
+            for batch in bar:
 
                 inputs, labels = batch
                 inputs, labels = inputs.to( self.device ), labels.to( self.device )
@@ -674,7 +675,8 @@ class DistilBERTTrainer(ModelTrainer):
         # Evaluate without gradient calculation
         with torch.no_grad():
 
-            for batch in data_loader:
+            bar = tqdm( data_loader, desc = "Evaluating", unit = 'batch', total = len( data_loader ) )
+            for batch in bar:
                 # Forward pass
 
                 input_ids = batch['input_ids'].to( self.device )

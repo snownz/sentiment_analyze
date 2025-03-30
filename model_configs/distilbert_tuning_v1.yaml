@@ -22,7 +22,7 @@ training:
 
 # Hyperparameter tuning
 hyperparameter_tuning:
-  enabled: false  # Enable hyperparameter tuning
+  enabled: true  # Enable hyperparameter tuning
   n_trials: 20   # Number of trials to run
   cv_folds: 3    # Number of cross-validation folds
   n_epochs: 2  # Number of epochs for each trial

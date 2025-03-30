@@ -25,7 +25,7 @@ def save_config(config, config_path):
         yaml.dump( config, f, default_flow_style = False )
     logger.info(f"Configuration saved to {config_path}")
 
-CONFIG_FILE = 'model_configs/lstm_tuning_v2.yaml'
+CONFIG_FILE = 'model_configs/lstm_tuning_v1.yaml'
 FORCE_TUNING = False
 
 # Load configuration
