@@ -94,7 +94,7 @@ class DistilBERTSentimentModel(nn.Module):
         self.pretrained_model = pretrained_model
         
         # Load pretrained DistilBERT model
-        self.bert = DistilBertForSequenceClassification.from_pretrained( "distilbert-base-uncased", num_labels = num_classes )
+        self.bert = DistilBertForSequenceClassification.from_pretrained( pretrained_model, num_labels = num_classes )
                 
     def forward(self, input_ids, attention_mask=None):
         

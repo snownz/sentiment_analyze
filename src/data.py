@@ -463,7 +463,15 @@ class YelpDataProcessor:
         X_train, X_val, y_train, y_val = train_test_split(
             X_train_val, y_train_val, test_size=0.25, stratify=y_train_val, random_state=42
         )
-        
+        _, x_tune, _, y_tune = train_test_split(
+            X_train, y_train, test_size = 0.1, stratify = y_train, random_state = 42
+        )
+
+        logger.info(f"Length of training set: {len(X_train)}")
+        logger.info(f"Length of validation set: {len(X_val)}")
+        logger.info(f"Length of test set: {len(X_test)}")
+        logger.info(f"Length of tuning set: {len(x_tune)}")
+
         # Initialize tokenizer based on method
         if self.tokenization_method == 'bpe':
             # Check if we already have a trained BPE tokenizer
@@ -484,27 +492,32 @@ class YelpDataProcessor:
         X_train_seq = self.texts_to_sequences(X_train)
         X_val_seq = self.texts_to_sequences(X_val)
         X_test_seq = self.texts_to_sequences(X_test)
+        x_tune_seq = self.texts_to_sequences(x_tune)
         
         # Pad sequences
         logger.info(f"Padding sequences to length {self.max_length}")
         X_train_pad = self.pad_sequences(X_train_seq)
         X_val_pad = self.pad_sequences(X_val_seq)
         X_test_pad = self.pad_sequences(X_test_seq)
+        x_tune_pad = self.pad_sequences(x_tune_seq)
         
         # Convert to PyTorch tensors
         logger.info("Converting to PyTorch tensors")
         X_train_tensor = torch.tensor(X_train_pad, dtype=torch.long)
         X_val_tensor = torch.tensor(X_val_pad, dtype=torch.long)
         X_test_tensor = torch.tensor(X_test_pad, dtype=torch.long)
+        x_tune_tensor = torch.tensor(x_tune_pad, dtype=torch.long)
         
         y_train_tensor = torch.tensor(y_train, dtype=torch.long)
         y_val_tensor = torch.tensor(y_val, dtype=torch.long)
         y_test_tensor = torch.tensor(y_test, dtype=torch.long)
+        y_tune_tensor = torch.tensor(y_tune, dtype=torch.long)
         
         # Create TensorDataset and DataLoader
         train_dataset = torch.utils.data.TensorDataset(X_train_tensor, y_train_tensor)
         val_dataset = torch.utils.data.TensorDataset(X_val_tensor, y_val_tensor)
         test_dataset = torch.utils.data.TensorDataset(X_test_tensor, y_test_tensor)
+        tune_dataset = torch.utils.data.TensorDataset(x_tune_tensor, y_tune_tensor)
         
         train_loader = DataLoader(
             train_dataset, 
@@ -522,7 +535,7 @@ class YelpDataProcessor:
         logger.info(f"Validation data: {len(val_dataset)} samples")
         logger.info(f"Test data: {len(test_dataset)} samples")
         
-        return train_dataset, train_loader, val_loader, test_loader, df
+        return tune_dataset, train_loader, val_loader, test_loader, df
     
     def prepare_data_bert(self, df=None):
         """
@@ -542,7 +555,6 @@ class YelpDataProcessor:
         # Preprocess text
         logger.info("Preprocessing text")
         df['processed_text'] = df['text'].progress_apply( partial( self.preprocess_text, lower = False ) )
-        # df['processed_text'] = df['text']
         
         # Encode sentiment labels
         logger.info("Encoding labels")
@@ -560,17 +572,26 @@ class YelpDataProcessor:
         # Split into train, validation, and test sets
         logger.info("Splitting data into train, validation, and test sets")
         X_train_val, X_test, y_train_val, y_test = train_test_split(
-            df['processed_text'], encoded_labels, test_size=0.2, stratify=encoded_labels, random_state=42
+            df['processed_text'], encoded_labels, test_size = 0.2, stratify = encoded_labels, random_state = 42
         )
         X_train, X_val, y_train, y_val = train_test_split(
-            X_train_val, y_train_val, test_size=0.25, stratify=y_train_val, random_state=42
+            X_train_val, y_train_val, test_size = 0.25, stratify = y_train_val, random_state = 42
         )
+        _, x_tune, _, y_tune = train_test_split(
+            X_train, y_train, test_size = 0.1, stratify = y_train, random_state = 42
+        )
+
+        logger.info(f"Length of training set: {len(X_train)}")
+        logger.info(f"Length of validation set: {len(X_val)}")
+        logger.info(f"Length of test set: {len(X_test)}")
+        logger.info(f"Length of tuning set: {len(x_tune)}")
         
         # Create PyTorch datasets
         logger.info("Creating PyTorch datasets")
-        train_dataset = YelpBertDataset(X_train.values, y_train, self.bert_tokenizer, self.max_length)
-        val_dataset = YelpBertDataset(X_val.values, y_val, self.bert_tokenizer, self.max_length)
-        test_dataset = YelpBertDataset(X_test.values, y_test, self.bert_tokenizer, self.max_length)
+        train_dataset = YelpBertDataset( X_train.values, y_train, self.bert_tokenizer, self.max_length )
+        val_dataset = YelpBertDataset( X_val.values, y_val, self.bert_tokenizer, self.max_length )
+        test_dataset = YelpBertDataset( X_test.values, y_test, self.bert_tokenizer, self.max_length )
+        tune_dataset = YelpBertDataset( x_tune.values, y_tune, self.bert_tokenizer, self.max_length )
         
         # Create DataLoaders
         logger.info(f"Creating DataLoaders with batch size {self.batch_size}")
@@ -598,7 +619,7 @@ class YelpDataProcessor:
         logger.info(f"Validation data: {len(val_dataset)} samples")
         logger.info(f"Test data: {len(test_dataset)} samples")
         
-        return train_dataset, train_dataloader, val_dataloader, test_dataloader, df
+        return tune_dataset, train_dataloader, val_dataloader, test_dataloader, df
 
 class YelpBertDataset(Dataset):
     """PyTorch Dataset for Yelp reviews using BERT-based models."""

@@ -419,7 +419,7 @@ class ModelTrainer:
                     'optimizer': trial.suggest_categorical( 'optimizer', [ 'adam', 'adamw', 'sgd', 'rmsprop' ] ),
                     'learning_rate': trial.suggest_float( 'learning_rate', 1e-5, 1e-2, log = True ),
                     'weight_decay': trial.suggest_float( 'weight_decay', 1e-6, 1e-3, log = True ),
-                    'batch_size': trial.suggest_categorical( 'batch_size', [ 64, 128, 512 ] ),
+                    'batch_size': trial.suggest_categorical( 'batch_size', [ 16, 32 ] ),
                 })
             
             print("========================================")
@@ -715,7 +715,7 @@ class DistilBERTTrainer(ModelTrainer):
         if 'weight_decay' in params:
             self.weight_decay = params['weight_decay']
         
-        pretrained_model = params.get( 'pretrained_model', self.model.pretrained_model )
+        pretrained_model = self.model.pretrained_model
         num_classes = params.get( 'num_classes', self.model.num_classes )
 
         # Re-initialize model

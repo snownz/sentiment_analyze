@@ -173,7 +173,7 @@ with torch.amp.autocast( enabled = True, device_type = device.type ):
     # Evaluate the model
     logger.info( "Evaluating DistilBERT model..." )
     results, test_preds, test_labels = trainer.evaluate(
-        test_loader = trainer.test_loader,
+        loader = trainer.test_loader,
         class_names = data_processor.label_encoder.classes_
     )
 # Analyze by review length
