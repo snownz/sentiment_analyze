@@ -419,7 +419,7 @@ class ModelTrainer:
                     'optimizer': trial.suggest_categorical( 'optimizer', [ 'adam', 'adamw', 'sgd', 'rmsprop' ] ),
                     'learning_rate': trial.suggest_float( 'learning_rate', 1e-5, 1e-2, log = True ),
                     'weight_decay': trial.suggest_float( 'weight_decay', 1e-6, 1e-3, log = True ),
-                    'batch_size': trial.suggest_categorical( 'batch_size', [ 32, 64, 512 ] ),
+                    'batch_size': trial.suggest_categorical( 'batch_size', [ 64, 128, 512 ] ),
                 })
             
             print("========================================")
@@ -704,12 +704,7 @@ class DistilBERTTrainer(ModelTrainer):
         return avg_loss, accuracy, f1, all_preds, all_labels
 
     def _reset_model(self, params):
-        
-        # Update model parameters if needed
-        if hasattr(self.model, 'dropout') and 'dropout' in params:
-            if hasattr(self.model.distilbert, 'config'):
-                self.model.distilbert.config.dropout = params['dropout']
-        
+                
         # Update trainer parameters
         if 'optimizer' in params:
             self.optimizer_name = params['optimizer']

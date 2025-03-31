@@ -19,6 +19,7 @@ from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import BpeTrainer
 from tqdm import tqdm
+from functools import partial
 tqdm.pandas()
 
 # Set up logging
@@ -134,7 +135,7 @@ class YelpDataProcessor:
         
         return df[['text', 'sentiment']]
     
-    def preprocess_text(self, text):
+    def preprocess_text(self, text, lower=True):
         """
         Clean and preprocess text data.
         
@@ -148,7 +149,8 @@ class YelpDataProcessor:
             return ""
             
         # Convert to lowercase
-        text = text.lower()
+        if lower:
+            text = text.lower()
         
         # Remove URLs
         text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -539,7 +541,8 @@ class YelpDataProcessor:
         
         # Preprocess text
         logger.info("Preprocessing text")
-        df['processed_text'] = df['text'].progress_apply( self.preprocess_text )
+        df['processed_text'] = df['text'].progress_apply( partial( self.preprocess_text, lower = False ) )
+        # df['processed_text'] = df['text']
         
         # Encode sentiment labels
         logger.info("Encoding labels")
@@ -628,3 +631,4 @@ class YelpBertDataset(Dataset):
             'attention_mask': encoding['attention_mask'].flatten(),
             'label': torch.tensor(label, dtype=torch.long)
         }
+

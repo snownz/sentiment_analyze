@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import DistilBertForSequenceClassification, DistilBertModel
+from transformers import DistilBertForSequenceClassification
 from .layers import EmbeddingLayer, LSTMLayer, AttentionLayer
 
 class LSTMSentimentModel(nn.Module):
@@ -94,31 +94,12 @@ class DistilBERTSentimentModel(nn.Module):
         self.pretrained_model = pretrained_model
         
         # Load pretrained DistilBERT model
-        self.bert = DistilBertModel.from_pretrained( "distilbert-base-uncased" )
-        for param in self.bert.parameters():
-            param.requires_grad = False  # freeze BERT
-
-        # Attention layer
-        self.attention = AttentionLayer( 768 ) 
-
-        # Classification head
-        self.classifier = nn.Sequential(
-            nn.Dropout( dropout ),
-            nn.Linear( 768, 384 ),  # 768 is the output size of DistilBERT
-            nn.ReLU(),
-            nn.Dropout( dropout ),
-            nn.Linear( 384, num_classes )
-        )        
-    
+        self.bert = DistilBertForSequenceClassification.from_pretrained( "distilbert-base-uncased", num_labels = num_classes )
+                
     def forward(self, input_ids, attention_mask=None):
         
         # Get BERT outputs
-        with torch.no_grad():
-            outputs = self.bert( input_ids, attention_mask = attention_mask )
-        
-        # Get the last hidden state
-        context, _ = self.attention( outputs.last_hidden_state )
-
-        # Classify
-        logits = self.classifier( context )
+        outputs = self.bert( input_ids, attention_mask = attention_mask )
+        logits = outputs.logits
         return logits
+
