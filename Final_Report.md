@@ -296,3 +296,7 @@ Several avenues for improvement could be explored:
 6. PyTorch. https://pytorch.org/
 
 7. Hugging Face Transformers. https://huggingface.co/transformers/
+
+## 8. Git Repository Link
+
+https://github.com/snownz/sentiment_analyze/blob/main/Final_Report.pdf
