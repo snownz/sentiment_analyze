@@ -171,21 +171,9 @@ Training dynamics showed:
 
 #### Confusion Matrices
 
-**LSTM Model Confusion Matrix:**
+**Confusion Matrix (for LSTM and DistilBERT):**
 
-|           | Predicted Negative | Predicted Neutral | Predicted Positive |
-|-----------|-------------------|-------------------|-------------------|
-| True Negative | 44,138 | 4,974 | 2,564 |
-| True Neutral | 6,959 | 11,483 | 7,305 |
-| True Positive | 2,099 | 4,727 | 44,636 |
-
-**DistilBERT Model Confusion Matrix:**
-
-|           | Predicted Negative | Predicted Neutral | Predicted Positive |
-|-----------|-------------------|-------------------|-------------------|
-| True Negative | 43,730 | 5,231 | 2,715 |
-| True Neutral | 7,551 | 10,682 | 7,514 |
-| True Positive | 3,072 | 5,054 | 43,336 |
+![Confusion matrix](images/confusion_matrix.png)
 
 Both models show similar patterns, with strongest performance on negative and positive classes, and more confusion with the neutral class.
 
@@ -194,16 +182,12 @@ Both models show similar patterns, with strongest performance on negative and po
 Both models maintained consistent performance across different review length categories:
 
 **LSTM Performance by Length:**
-- Very Short (0-50 words): ~78% accuracy, ~72% F1 score
-- Short (51-100 words): ~78% accuracy, ~72% F1 score
-- Medium (101-200 words): ~78% accuracy, ~72% F1 score
-- Long (>200 words): ~78% accuracy, ~72% F1 score
+![LSTM Performance](images/LSTM_seq_length.png)
+
 
 **DistilBERT Performance by Length:**
-- Very Short (0-50 words): ~76% accuracy, ~70% F1 score
-- Short (51-100 words): ~76% accuracy, ~70% F1 score
-- Medium (101-200 words): ~76% accuracy, ~70% F1 score
-- Long (>200 words): ~76% accuracy, ~70% F1 score
+![DistilBERT Performance](images/DistilBERT_seq_length.png)
+
 
 This consistent performance across lengths suggests both models can effectively handle reviews of varying lengths within the 128 token limit set during preprocessing.
 
